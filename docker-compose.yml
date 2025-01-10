@@ -1,0 +1,99 @@
+services:
+  db:
+    image: xmpro.azurecr.io/db:4.4.17-XMR
+    ports:
+      - "1433:1433"
+    environment:
+      - DB_SA_PASSWORD
+      - MSSQL_SA_PASSWORD=$DB_SA_PASSWORD
+      # - MSSQL_PID=
+      # - MSSQL_TCP_PORT=
+  ad:
+    image: xmpro.azurecr.io/ad:4.4.17-XMR
+    depends_on:
+      addbmigrate:
+        condition: service_completed_successfully
+      addb:
+        condition: service_completed_successfully
+    ports:
+      - "$AD_PORT:8443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=dev
+      - xm__serilog__minimumlevel__default=$AD_LOG_LEVEL
+      - xm__xmpro__appDesigner__featureFlags__dbMigrationsEnabled=false
+      - xm__xmpro__appDesigner__featureFlags__enableHealthChecks=false
+      - xm__xmpro__appDesigner__featureFlags__enableLogging=true
+      - xm__xmpro__appDesigner__featureFlags__enableApplicationInsightsTelemetry=false
+      - xm__xmpro__xmidentity__server__baseUrl=$SM_BASEURL_SERVER
+      - xm__xmpro__xmidentity__client__baseUrl=$AD_BASEURL_CLIENT
+      - xm__xmpro__xmidentity__client__id=$AD_PRODUCT_ID
+      - xm__xmpro__xmidentity__client__sharedkey=$AD_PRODUCT_KEY
+      - xm__xmpro__data__connectionString=$ADDB_CONNECTIONSTRING
+      - xm__xmpro__xmsettings__data__connectionString=$ADDB_CONNECTIONSTRING
+      - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
+  addbmigrate:
+    image: xmpro.azurecr.io/addbmigrate:4.4.17-XMR
+    depends_on:
+      addb:
+        condition: service_completed_successfully
+    environment:
+      - ADDB_CONNECTIONSTRING
+      - DS_BASEURL_CLIENT
+  addb:
+    image: xmpro.azurecr.io/addb:4.4.17-XMR
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=$DB_SA_PASSWORD
+      - SQLCMDDBNAME=master
+    
+      - ADDB_USERNAME
+      - ADDB_PASSWORD
+  ds:
+    image: xmpro.azurecr.io/ds:4.4.17-XMR
+    depends_on:
+      dsdb:
+        condition: service_completed_successfully
+      dsdbmigrate:
+        condition: service_completed_successfully
+    ports:
+      - "$DS_PORT:8443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=dev
+      - xm__serilog__minimumlevel__default=$DS_LOG_LEVEL
+      - xm__xmpro__data__connectionString=$DSDB_CONNECTIONSTRING
+      - xm__xmpro__xmsettings__data__connectionString=$DSDB_CONNECTIONSTRING
+      - xm__xmpro__dataStreamDesigner__streamHostDownloadBaseUrl=https://download.app.xmpro.com/
+      - xm__xmpro__dataStreamDesigner__featureFlags__dbMigrationsEnabled=false
+      - xm__xmpro__dataStreamDesigner__featureFlags__enableHealthChecks=false
+      - xm__xmpro__dataStreamDesigner__featureFlags__enableApplicationInsightsTelemetry=false
+      - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
+      - xm__xmpro__xmidentity__server__baseUrl=$SM_BASEURL_SERVER
+      - xm__xmpro__xmidentity__client__id=$DS_PRODUCT_ID
+      - xm__xmpro__xmidentity__client__baseUrl=$DS_BASEURL_CLIENT
+      - xm__xmpro__xmidentity__client__sharedkey=$DS_PRODUCT_KEY
+      - xm__xmpro__keyVault__provider=
+      - xm__xmpro__keyVault__name=
+  dsdb:
+    image: xmpro.azurecr.io/dsdb:4.4.17-XMR
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=$DB_SA_PASSWORD
+      - SQLCMDDBNAME=master
+    
+      - DSDB_USERNAME
+      - DSDB_PASSWORD
+  dsdbmigrate:
+    image: xmpro.azurecr.io/dsdbmigrate:4.4.17-XMR
+    depends_on:
+      dsdb:
+        condition: service_completed_successfully
+    environment:
+      - DSDB_CONNECTIONSTRING

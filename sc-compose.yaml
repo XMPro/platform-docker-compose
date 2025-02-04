@@ -1,20 +1,39 @@
 services:
-  db:
-    image: xmpro.azurecr.io/db:${VERSION:-4.4.17-XMR}
-    ports:
-      - "1433:1433"
+  dsdb:
+    image: xmpro.azurecr.io/dsdb:${VERSION:-4.4.17-XMR}
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      - DB_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - MSSQL_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      # - MSSQL_PID=
-      # - MSSQL_TCP_PORT=
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - SQLCMDDBNAME=master
+    
+      - DSDB_USERNAME=${DSDB_USERNAME:-someDsDbUser}
+      - DSDB_PASSWORD=${DSDB_PASSWORD:-someDsDbPassword!}
+  dsdbmigrate:
+    image: xmpro.azurecr.io/dsdbmigrate:${VERSION:-4.4.17-XMR}
+    depends_on:
+      dsdb:
+        condition: service_completed_successfully
+    environment:
+      - DSDB_CONNECTIONSTRING=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
+  addbmigrate:
+    image: xmpro.azurecr.io/addbmigrate:${VERSION:-4.4.17-XMR}
+    depends_on:
+      addb:
+        condition: service_completed_successfully
+    environment:
+      - ADDB_CONNECTIONSTRING=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
+      - DS_BASEURL_CLIENT=${DS_BASEURL_CLIENT:-https://localhost:5203/}
   ad:
+    image: xmpro.azurecr.io/ad:${VERSION:-4.4.17-XMR}
     depends_on:
       addbmigrate:
         condition: service_completed_successfully
       addb:
         condition: service_completed_successfully
-    image: xmpro.azurecr.io/ad:${VERSION:-4.4.17-XMR}
     ports:
       - "$AD_PORT:8443"
     environment:
@@ -32,19 +51,11 @@ services:
       - xm__xmpro__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
       - xm__xmpro__xmsettings__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
       - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
-  addbmigrate:
-    depends_on:
-      addb:
-        condition: service_completed_successfully
-    image: xmpro.azurecr.io/addbmigrate:${VERSION:-4.4.17-XMR}
-    environment:
-      - ADDB_CONNECTIONSTRING=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
-      - DS_BASEURL_CLIENT=${DS_BASEURL_CLIENT:-https://localhost:5203/}
   addb:
+    image: xmpro.azurecr.io/addb:${VERSION:-4.4.17-XMR}
     depends_on:
       db:
         condition: service_healthy
-    image: xmpro.azurecr.io/addb:${VERSION:-4.4.17-XMR}
     environment:
       - SQLCMDSERVER=db
       - SQLCMDUSER=sa
@@ -53,13 +64,22 @@ services:
     
       - ADDB_USERNAME=${ADDB_USERNAME:-someAdDbUser}
       - ADDB_PASSWORD=${ADDB_PASSWORD:-someAdDbPassword!}
+  db:
+    image: xmpro.azurecr.io/db:${VERSION:-4.4.17-XMR}
+    ports:
+      - "1433:1433"
+    environment:
+      - DB_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - MSSQL_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      # - MSSQL_PID=
+      # - MSSQL_TCP_PORT=
   ds:
+    image: xmpro.azurecr.io/ds:${VERSION:-4.4.17-XMR}
     depends_on:
       dsdb:
         condition: service_completed_successfully
       dsdbmigrate:
         condition: service_completed_successfully
-    image: xmpro.azurecr.io/ds:${VERSION:-4.4.17-XMR}
     ports:
       - "$DS_PORT:8443"
     environment:
@@ -79,23 +99,3 @@ services:
       - xm__xmpro__xmidentity__client__sharedkey=${DS_PRODUCT_KEY:-0OIQqsAIiSdmzK2CdPWOzc6F5537Vdt6pwTUYzHm3Ik=} ## currently using SM dev
       - xm__xmpro__keyVault__provider=
       - xm__xmpro__keyVault__name=
-  dsdb:
-    depends_on:
-      db:
-        condition: service_healthy
-    image: xmpro.azurecr.io/dsdb:${VERSION:-4.4.17-XMR}
-    environment:
-      - SQLCMDSERVER=db
-      - SQLCMDUSER=sa
-      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - SQLCMDDBNAME=master
-    
-      - DSDB_USERNAME=${DSDB_USERNAME:-someDsDbUser}
-      - DSDB_PASSWORD=${DSDB_PASSWORD:-someDsDbPassword!}
-  dsdbmigrate:
-    depends_on:
-      dsdb:
-        condition: service_completed_successfully
-    image: xmpro.azurecr.io/dsdbmigrate:${VERSION:-4.4.17-XMR}
-    environment:
-      - DSDB_CONNECTIONSTRING=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}

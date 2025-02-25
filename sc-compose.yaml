@@ -35,7 +35,7 @@ services:
       addb:
         condition: service_completed_successfully
     ports:
-      - "$AD_PORT:8443"
+      - "${AD_PORT:-5202}:8443"
     environment:
       - ASPNETCORE_ENVIRONMENT=dev
       - xm__serilog__minimumlevel__default=${AD_LOG_LEVEL:-Information}
@@ -81,7 +81,7 @@ services:
       dsdbmigrate:
         condition: service_completed_successfully
     ports:
-      - "$DS_PORT:8443"
+      - "${DS_PORT:-5203}:8443"
     environment:
       - ASPNETCORE_ENVIRONMENT=dev
       - xm__serilog__minimumlevel__default=${DS_LOG_LEVEL:-Information}

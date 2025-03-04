@@ -1,35 +1,4 @@
 services:
-  addb:
-    image: xmpro.azurecr.io/addb:${VERSION:-4.4.17-XMR}
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - SQLCMDSERVER=db
-      - SQLCMDUSER=sa
-      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - SQLCMDDBNAME=master
-    
-      - ADDB_USERNAME=${ADDB_USERNAME:-someAdDbUser}
-      - ADDB_PASSWORD=${ADDB_PASSWORD:-someAdDbPassword!}
-  sm:
-    image: xmprononprod.azurecr.io/sm:${VERSION:-4.4.18}
-    depends_on:
-      smdbmigrate:
-        condition: service_completed_successfully
-      smdb:
-        condition: service_completed_successfully
-      licenses:
-        condition: service_completed_successfully
-    ports:
-      - "${SM_PORT:-5200}:8443"
-    environment:
-      - SM_LOG_LEVEL=${SM_LOG_LEVEL:-Information}
-      - SM_PRELOAD_ASSEMBLIES=${SM_PRELOAD_ASSEMBLIES:-false}
-      - SMDB_CONNECTIONSTRING=${SMDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=SM;User=someSmDbUser;Password=someSmDbPassword!}
-      - SM_BASEURL_CLIENT=${SM_BASEURL_CLIENT:-https://localhost:5200/}
-      - SM_BASEURL_SERVER=${SM_BASEURL_SERVER:-https://sm:8443/}
-      - SM_PRODUCT_ID=${SM_PRODUCT_ID:-022af89c-04ca-5843-070b-b6edb339aaea}
   smdbmigrate:
     image: xmpro.azurecr.io/smdbmigrate:${VERSION:-4.4.17-XMR}
     depends_on:
@@ -57,32 +26,6 @@ services:
       - DS_PRODUCT_KEY=${DS_PRODUCT_KEY:-f744911d-e8a6-f8fb-9665-61b185845d6a}
       - XMPRO_NOTEBOOK_PRODUCT_KEY=${XMPRO_NOTEBOOK_PRODUCT_KEY:-383526ff-8d3f-5941-4bc8-482ed83152be}
       - AI_PRODUCT_ENABLE=${AI_PRODUCT_ENABLE:-true}
-  dsdb:
-    image: xmpro.azurecr.io/dsdb:${VERSION:-4.4.17-XMR}
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - SQLCMDSERVER=db
-      - SQLCMDUSER=sa
-      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - SQLCMDDBNAME=master
-    
-      - DSDB_USERNAME=${DSDB_USERNAME:-someDsDbUser}
-      - DSDB_PASSWORD=${DSDB_PASSWORD:-someDsDbPassword!}
-  smdb:
-    image: xmpro.azurecr.io/smdb:${VERSION:-4.4.17-XMR}
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - SQLCMDSERVER=db
-      - SQLCMDUSER=sa
-      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - SQLCMDDBNAME=master
-    
-      - SMDB_USERNAME=${SMDB_USERNAME:-someSmDbUser}
-      - SMDB_PASSWORD=${SMDB_PASSWORD:-someSmDbPassword!}
   licenses:
     image: xmprononprod.azurecr.io/licenses:${VERSION:-4.4.18}
     depends_on:
@@ -103,14 +46,42 @@ services:
       - LICENSE_API_URL=${LICENSE_API_URL:-https://fa-xmrlicense-nonprod.azurewebsites.net/api/license}
       - DS_PRODUCT_ID=${DS_PRODUCT_ID:-71435803-967a-e9ac-574c-face863f7ec0}
       - AD_PRODUCT_ID=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d}
+  smdb:
+    image: xmpro.azurecr.io/smdb:${VERSION:-4.4.17-XMR}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - SQLCMDDBNAME=master
+    
+      - SMDB_USERNAME=${SMDB_USERNAME:-someSmDbUser}
+      - SMDB_PASSWORD=${SMDB_PASSWORD:-someSmDbPassword!}
+  addbmigrate:
+    image: xmpro.azurecr.io/addbmigrate:${VERSION:-4.4.17-XMR}
+    depends_on:
+      addb:
+        condition: service_completed_successfully
+    environment:
+      - ADDB_CONNECTIONSTRING=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
+      - DS_BASEURL_CLIENT=${DS_BASEURL_CLIENT:-https://localhost:5203/}
+  dsdbmigrate:
+    image: xmpro.azurecr.io/dsdbmigrate:${VERSION:-4.4.17-XMR}
+    depends_on:
+      dsdb:
+        condition: service_completed_successfully
+    environment:
+      - DSDB_CONNECTIONSTRING=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
   ds:
     image: xmpro.azurecr.io/ds:${VERSION:-4.4.17-XMR}
     depends_on:
+      dsdbmigrate:
+        condition: service_completed_successfully
       sm:
         condition: service_healthy
       dsdb:
-        condition: service_completed_successfully
-      dsdbmigrate:
         condition: service_completed_successfully
     ports:
       - "${DS_PORT:-5203}:8443"
@@ -130,14 +101,45 @@ services:
       - xm__xmpro__xmidentity__client__sharedkey=${DS_PRODUCT_KEY:-abbf8cd7-8123-c68a-44f4-2366510a23df} 
       - xm__xmpro__keyVault__provider=
       - xm__xmpro__keyVault__name=
+  sm:
+    image: xmprononprod.azurecr.io/sm:${VERSION:-4.4.18}
+    depends_on:
+      smdbmigrate:
+        condition: service_completed_successfully
+      licenses:
+        condition: service_completed_successfully
+      smdb:
+        condition: service_completed_successfully
+    ports:
+      - "${SM_PORT:-5200}:8443"
+    environment:
+      - SM_LOG_LEVEL=${SM_LOG_LEVEL:-Information}
+      - SM_PRELOAD_ASSEMBLIES=${SM_PRELOAD_ASSEMBLIES:-false}
+      - SMDB_CONNECTIONSTRING=${SMDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=SM;User=someSmDbUser;Password=someSmDbPassword!}
+      - SM_BASEURL_CLIENT=${SM_BASEURL_CLIENT:-https://localhost:5200/}
+      - SM_BASEURL_SERVER=${SM_BASEURL_SERVER:-https://sm:8443/}
+      - SM_PRODUCT_ID=${SM_PRODUCT_ID:-022af89c-04ca-5843-070b-b6edb339aaea}
+  addb:
+    image: xmpro.azurecr.io/addb:${VERSION:-4.4.17-XMR}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - SQLCMDDBNAME=master
+    
+      - ADDB_USERNAME=${ADDB_USERNAME:-someAdDbUser}
+      - ADDB_PASSWORD=${ADDB_PASSWORD:-someAdDbPassword!}
   ad:
     image: xmpro.azurecr.io/ad:${VERSION:-4.4.17-XMR}
     depends_on:
-      addb:
+      addbmigrate:
         condition: service_completed_successfully
       sm:
         condition: service_healthy
-      addbmigrate:
+      addb:
         condition: service_completed_successfully
     ports:
       - "${AD_PORT:-5202}:8443"
@@ -162,18 +164,16 @@ services:
     environment:
       - DB_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
       - MSSQL_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-  addbmigrate:
-    image: xmpro.azurecr.io/addbmigrate:${VERSION:-4.4.17-XMR}
+  dsdb:
+    image: xmpro.azurecr.io/dsdb:${VERSION:-4.4.17-XMR}
     depends_on:
-      addb:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
     environment:
-      - ADDB_CONNECTIONSTRING=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
-      - DS_BASEURL_CLIENT=${DS_BASEURL_CLIENT:-https://localhost:5203/}
-  dsdbmigrate:
-    image: xmpro.azurecr.io/dsdbmigrate:${VERSION:-4.4.17-XMR}
-    depends_on:
-      dsdb:
-        condition: service_completed_successfully
-    environment:
-      - DSDB_CONNECTIONSTRING=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - SQLCMDDBNAME=master
+    
+      - DSDB_USERNAME=${DSDB_USERNAME:-someDsDbUser}
+      - DSDB_PASSWORD=${DSDB_PASSWORD:-someDsDbPassword!}

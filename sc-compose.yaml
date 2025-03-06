@@ -18,7 +18,7 @@ services:
       - XMPRO_NOTEBOOK_BASEURL_CLIENT=${XMPRO_NOTEBOOK_BASEURL_CLIENT:-https://localhost:9998/}
       - AD_PRODUCT_ID=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d}
       - AI_PRODUCT_ID=${AI_PRODUCT_ID:-e0b6a43a-bdd3-13ba-ffba-4c889461a1f3}
-      - DS_PRODUCT_ID=${DS_PRODUCT_ID:-f744911d-e8a6-f8fb-9665-61b185845d6a}
+      - DS_PRODUCT_ID=${DS_PRODUCT_ID:-71435803-967a-e9ac-574c-face863f7ec0}
       - SM_PRODUCT_ID=${SM_PRODUCT_ID:-9ce46fc6-4b8d-b5dd-c038-03d82bf6d3e3}
       - XMPRO_NOTEBOOK_PRODUCT_ID=${XMPRO_NOTEBOOK_PRODUCT_ID:-3765f34c-ff4e-3cff-e24e-58ac5771d8c5}
       - AD_PRODUCT_KEY=${AD_PRODUCT_KEY:-f27eeb2d-c557-281c-9d4c-fe44cfb74a97}
@@ -30,8 +30,6 @@ services:
     image: xmprononprod.azurecr.io/licenses:${VERSION:-4.4.18}
     depends_on:
       smdbmigrate:
-        condition: service_completed_successfully
-      smdb:
         condition: service_completed_successfully
     environment:
       - SQLCMDSERVER=db
@@ -89,7 +87,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=dev
       - xm__serilog__minimumlevel__default=${DS_LOG_LEVEL:-Information}
       - xm__xmpro__data__connectionString=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
-      - xm__xmpro__xmsettings__data__connectionString=$DSDB_CONNECTIONSTRING
+      - xm__xmpro__xmsettings__data__connectionString=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
       - xm__xmpro__dataStreamDesigner__streamHostDownloadBaseUrl=https://download.app.xmpro.com/
       - xm__xmpro__dataStreamDesigner__featureFlags__dbMigrationsEnabled=false
       - xm__xmpro__dataStreamDesigner__featureFlags__enableHealthChecks=false

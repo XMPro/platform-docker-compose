@@ -108,6 +108,8 @@ services:
         condition: service_completed_successfully
       smdb:
         condition: service_completed_successfully
+      smidentity:
+        condition: service_healthy
     ports:
       - "${SM_PORT:-5200}:8443"
     environment:
@@ -130,6 +132,19 @@ services:
     
       - ADDB_USERNAME=${ADDB_USERNAME:-someAdDbUser}
       - ADDB_PASSWORD=${ADDB_PASSWORD:-someAdDbPassword!}
+  smidentity:
+    image: xmprononprod.azurecr.io/sm:${VERSION:-4.4.18}
+    depends_on:
+      smdb:
+        condition: service_completed_successfully
+    environment:
+      - SM_LOG_LEVEL=${SM_LOG_LEVEL:-Information}
+      - SM_PRELOAD_ASSEMBLIES=${SM_PRELOAD_ASSEMBLIES:-false}
+      - SMDB_CONNECTIONSTRING=${SMDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=SM;User=someSmDbUser;Password=someSmDbPassword!}
+      - SM_BASEURL_CLIENT=${SM_BASEURL_CLIENT:-https://localhost:5200/}
+      - SM_BASEURL_SERVER=${SM_BASEURL_SERVER:-https://sm:8443/}
+      - SM_PRODUCT_ID=${SM_PRODUCT_ID:-022af89c-04ca-5843-070b-b6edb339aaea}
+      - SM_USE_SMIDENTITY_CONTAINER=false
   ad:
     image: xmpro.azurecr.io/ad:${VERSION:-4.4.17-XMR}
     depends_on:

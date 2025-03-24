@@ -93,10 +93,10 @@ services:
       - xm__xmpro__dataStreamDesigner__featureFlags__enableHealthChecks=false
       - xm__xmpro__dataStreamDesigner__featureFlags__enableApplicationInsightsTelemetry=false
       - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
-      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/} 
-      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d} 
+      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/}
+      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d}
       - xm__xmpro__xmidentity__client__baseUrl=${DS_BASEURL_CLIENT:-https://localhost:5203/}
-      - xm__xmpro__xmidentity__client__sharedkey=${DS_PRODUCT_KEY:-abbf8cd7-8123-c68a-44f4-2366510a23df} 
+      - xm__xmpro__xmidentity__client__sharedkey=${DS_PRODUCT_KEY:-abbf8cd7-8123-c68a-44f4-2366510a23df}
       - xm__xmpro__keyVault__provider=
       - xm__xmpro__keyVault__name=
   sm:
@@ -163,10 +163,10 @@ services:
       - xm__xmpro__appDesigner__featureFlags__enableHealthChecks=false
       - xm__xmpro__appDesigner__featureFlags__enableLogging=true
       - xm__xmpro__appDesigner__featureFlags__enableApplicationInsightsTelemetry=false
-      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/} 
+      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/}
       - xm__xmpro__xmidentity__client__baseUrl=${AD_BASEURL_CLIENT:-https://localhost:5202/}
-      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d} 
-      - xm__xmpro__xmidentity__client__sharedkey=${AD_PRODUCT_KEY:-7e66bb23-9486-2507-88d5-695c2a07aa52} 
+      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d}
+      - xm__xmpro__xmidentity__client__sharedkey=${AD_PRODUCT_KEY:-7e66bb23-9486-2507-88d5-695c2a07aa52}
       - xm__xmpro__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
       - xm__xmpro__xmsettings__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
       - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css

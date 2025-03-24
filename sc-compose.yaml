@@ -1,4 +1,95 @@
 services:
+  addbmigrate:
+    image: xmpro.azurecr.io/addbmigrate:${VERSION:-4.4.17-XMR}
+    depends_on:
+      addb:
+        condition: service_completed_successfully
+    environment:
+      - ADDB_CONNECTIONSTRING=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
+      - DS_BASEURL_CLIENT=${DS_BASEURL_CLIENT:-https://localhost:5203/}
+  licenses:
+    image: xmprononprod.azurecr.io/licenses:${VERSION:-4.4.18}
+    depends_on:
+      smdbmigrate:
+        condition: service_completed_successfully
+    environment:
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - SQLCMDDBNAME=master
+    
+      - SMDB_USERNAME=${SMDB_USERNAME:-someSmDbUser}
+      - SMDB_PASSWORD=${SMDB_PASSWORD:-someSmDbPassword!}
+      - COMPANY_ADMIN_EMAILADDRESS=${COMPANY_ADMIN_EMAILADDRESS:-evaluation@xmpro.com} ##Should this be removed?
+      - COMPANY_ID=${COMPANY_ID:-2}
+      - LICENSE_API_URL=${LICENSE_API_URL:-https://fa-xmrlicense-nonprod.azurewebsites.net/api/license}
+      - DS_PRODUCT_ID=${DS_PRODUCT_ID:-71435803-967a-e9ac-574c-face863f7ec0}
+      - AD_PRODUCT_ID=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d}
+  sm:
+    image: xmprononprod.azurecr.io/sm:${VERSION:-4.4.18}
+    depends_on:
+      licenses:
+        condition: service_completed_successfully
+      smdbmigrate:
+        condition: service_completed_successfully
+      smidentity:
+        condition: service_healthy
+      smdb:
+        condition: service_completed_successfully
+    ports:
+      - "${SM_PORT:-5200}:8443"
+    environment:
+      - SM_LOG_LEVEL=${SM_LOG_LEVEL:-Information}
+      - SM_PRELOAD_ASSEMBLIES=${SM_PRELOAD_ASSEMBLIES:-false}
+      - SMDB_CONNECTIONSTRING=${SMDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=SM;User=someSmDbUser;Password=someSmDbPassword!}
+      - SM_BASEURL_CLIENT=${SM_BASEURL_CLIENT:-https://localhost:5200/}
+      - SM_BASEURL_SERVER=${SM_BASEURL_SERVER:-https://sm:8443/}
+      - SM_PRODUCT_ID=${SM_PRODUCT_ID:-022af89c-04ca-5843-070b-b6edb339aaea}
+  dsdbmigrate:
+    image: xmpro.azurecr.io/dsdbmigrate:${VERSION:-4.4.17-XMR}
+    depends_on:
+      dsdb:
+        condition: service_completed_successfully
+    environment:
+      - DSDB_CONNECTIONSTRING=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
+  dsdb:
+    image: xmpro.azurecr.io/dsdb:${VERSION:-4.4.17-XMR}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SQLCMDSERVER=db
+      - SQLCMDUSER=sa
+      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - SQLCMDDBNAME=master
+    
+      - DSDB_USERNAME=${DSDB_USERNAME:-someDsDbUser}
+      - DSDB_PASSWORD=${DSDB_PASSWORD:-someDsDbPassword!}
+  ad:
+    image: xmpro.azurecr.io/ad:${VERSION:-4.4.17-XMR}
+    depends_on:
+      addbmigrate:
+        condition: service_completed_successfully
+      sm:
+        condition: service_healthy
+      addb:
+        condition: service_completed_successfully
+    ports:
+      - "${AD_PORT:-5202}:8443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=dev
+      - xm__serilog__minimumlevel__default=${AD_LOG_LEVEL:-Information}
+      - xm__xmpro__appDesigner__featureFlags__dbMigrationsEnabled=false
+      - xm__xmpro__appDesigner__featureFlags__enableHealthChecks=false
+      - xm__xmpro__appDesigner__featureFlags__enableLogging=true
+      - xm__xmpro__appDesigner__featureFlags__enableApplicationInsightsTelemetry=false
+      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/} 
+      - xm__xmpro__xmidentity__client__baseUrl=${AD_BASEURL_CLIENT:-https://localhost:5202/}
+      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d} 
+      - xm__xmpro__xmidentity__client__sharedkey=${AD_PRODUCT_KEY:-7e66bb23-9486-2507-88d5-695c2a07aa52} 
+      - xm__xmpro__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
+      - xm__xmpro__xmsettings__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
+      - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
   smdbmigrate:
     image: xmpro.azurecr.io/smdbmigrate:${VERSION:-4.4.17-XMR}
     depends_on:
@@ -26,99 +117,6 @@ services:
       - DS_PRODUCT_KEY=${DS_PRODUCT_KEY:-f744911d-e8a6-f8fb-9665-61b185845d6a}
       - XMPRO_NOTEBOOK_PRODUCT_KEY=${XMPRO_NOTEBOOK_PRODUCT_KEY:-383526ff-8d3f-5941-4bc8-482ed83152be}
       - AI_PRODUCT_ENABLE=${AI_PRODUCT_ENABLE:-true}
-  licenses:
-    image: xmprononprod.azurecr.io/licenses:${VERSION:-4.4.18}
-    depends_on:
-      smdbmigrate:
-        condition: service_completed_successfully
-    environment:
-      - SQLCMDSERVER=db
-      - SQLCMDUSER=sa
-      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - SQLCMDDBNAME=master
-    
-      - SMDB_USERNAME=${SMDB_USERNAME:-someSmDbUser}
-      - SMDB_PASSWORD=${SMDB_PASSWORD:-someSmDbPassword!}
-      - COMPANY_ADMIN_EMAILADDRESS=${COMPANY_ADMIN_EMAILADDRESS:-evaluation@xmpro.com} ##Should this be removed?
-      - COMPANY_ID=${COMPANY_ID:-2}
-      - LICENSE_API_URL=${LICENSE_API_URL:-https://fa-xmrlicense-nonprod.azurewebsites.net/api/license}
-      - DS_PRODUCT_ID=${DS_PRODUCT_ID:-71435803-967a-e9ac-574c-face863f7ec0}
-      - AD_PRODUCT_ID=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d}
-  smdb:
-    image: xmpro.azurecr.io/smdb:${VERSION:-4.4.17-XMR}
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      - SQLCMDSERVER=db
-      - SQLCMDUSER=sa
-      - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - SQLCMDDBNAME=master
-    
-      - SMDB_USERNAME=${SMDB_USERNAME:-someSmDbUser}
-      - SMDB_PASSWORD=${SMDB_PASSWORD:-someSmDbPassword!}
-  addbmigrate:
-    image: xmpro.azurecr.io/addbmigrate:${VERSION:-4.4.17-XMR}
-    depends_on:
-      addb:
-        condition: service_completed_successfully
-    environment:
-      - ADDB_CONNECTIONSTRING=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
-      - DS_BASEURL_CLIENT=${DS_BASEURL_CLIENT:-https://localhost:5203/}
-  dsdbmigrate:
-    image: xmpro.azurecr.io/dsdbmigrate:${VERSION:-4.4.17-XMR}
-    depends_on:
-      dsdb:
-        condition: service_completed_successfully
-    environment:
-      - DSDB_CONNECTIONSTRING=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
-  ds:
-    image: xmpro.azurecr.io/ds:${VERSION:-4.4.17-XMR}
-    depends_on:
-      dsdbmigrate:
-        condition: service_completed_successfully
-      sm:
-        condition: service_healthy
-      dsdb:
-        condition: service_completed_successfully
-    ports:
-      - "${DS_PORT:-5203}:8443"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=dev
-      - xm__serilog__minimumlevel__default=${DS_LOG_LEVEL:-Information}
-      - xm__xmpro__data__connectionString=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
-      - xm__xmpro__xmsettings__data__connectionString=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
-      - xm__xmpro__dataStreamDesigner__streamHostDownloadBaseUrl=https://download.app.xmpro.com/
-      - xm__xmpro__dataStreamDesigner__featureFlags__dbMigrationsEnabled=false
-      - xm__xmpro__dataStreamDesigner__featureFlags__enableHealthChecks=false
-      - xm__xmpro__dataStreamDesigner__featureFlags__enableApplicationInsightsTelemetry=false
-      - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
-      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/} 
-      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d} 
-      - xm__xmpro__xmidentity__client__baseUrl=${DS_BASEURL_CLIENT:-https://localhost:5203/}
-      - xm__xmpro__xmidentity__client__sharedkey=${DS_PRODUCT_KEY:-abbf8cd7-8123-c68a-44f4-2366510a23df} 
-      - xm__xmpro__keyVault__provider=
-      - xm__xmpro__keyVault__name=
-  sm:
-    image: xmprononprod.azurecr.io/sm:${VERSION:-4.4.18}
-    depends_on:
-      smdbmigrate:
-        condition: service_completed_successfully
-      licenses:
-        condition: service_completed_successfully
-      smdb:
-        condition: service_completed_successfully
-      smidentity:
-        condition: service_healthy
-    ports:
-      - "${SM_PORT:-5200}:8443"
-    environment:
-      - SM_LOG_LEVEL=${SM_LOG_LEVEL:-Information}
-      - SM_PRELOAD_ASSEMBLIES=${SM_PRELOAD_ASSEMBLIES:-false}
-      - SMDB_CONNECTIONSTRING=${SMDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=SM;User=someSmDbUser;Password=someSmDbPassword!}
-      - SM_BASEURL_CLIENT=${SM_BASEURL_CLIENT:-https://localhost:5200/}
-      - SM_BASEURL_SERVER=${SM_BASEURL_SERVER:-https://sm:8443/}
-      - SM_PRODUCT_ID=${SM_PRODUCT_ID:-022af89c-04ca-5843-070b-b6edb339aaea}
   addb:
     image: xmpro.azurecr.io/addb:${VERSION:-4.4.17-XMR}
     depends_on:
@@ -145,40 +143,8 @@ services:
       - SM_BASEURL_SERVER=${SM_BASEURL_SERVER:-https://sm:8443/}
       - SM_PRODUCT_ID=${SM_PRODUCT_ID:-022af89c-04ca-5843-070b-b6edb339aaea}
       - SM_USE_SMIDENTITY_CONTAINER=false
-  ad:
-    image: xmpro.azurecr.io/ad:${VERSION:-4.4.17-XMR}
-    depends_on:
-      addbmigrate:
-        condition: service_completed_successfully
-      sm:
-        condition: service_healthy
-      addb:
-        condition: service_completed_successfully
-    ports:
-      - "${AD_PORT:-5202}:8443"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=dev
-      - xm__serilog__minimumlevel__default=${AD_LOG_LEVEL:-Information}
-      - xm__xmpro__appDesigner__featureFlags__dbMigrationsEnabled=false
-      - xm__xmpro__appDesigner__featureFlags__enableHealthChecks=false
-      - xm__xmpro__appDesigner__featureFlags__enableLogging=true
-      - xm__xmpro__appDesigner__featureFlags__enableApplicationInsightsTelemetry=false
-      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/} 
-      - xm__xmpro__xmidentity__client__baseUrl=${AD_BASEURL_CLIENT:-https://localhost:5202/}
-      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d} 
-      - xm__xmpro__xmidentity__client__sharedkey=${AD_PRODUCT_KEY:-7e66bb23-9486-2507-88d5-695c2a07aa52} 
-      - xm__xmpro__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
-      - xm__xmpro__xmsettings__data__connectionString=${ADDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=AD;User=someAdDbUser;Password=someAdDbPassword!}
-      - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
-  db:
-    image: xmpro.azurecr.io/db:${VERSION:-4.4.17-XMR}
-    ports:
-      - "1433:1433"
-    environment:
-      - DB_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-      - MSSQL_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
-  dsdb:
-    image: xmpro.azurecr.io/dsdb:${VERSION:-4.4.17-XMR}
+  smdb:
+    image: xmpro.azurecr.io/smdb:${VERSION:-4.4.17-XMR}
     depends_on:
       db:
         condition: service_healthy
@@ -188,5 +154,39 @@ services:
       - SQLCMDPASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
       - SQLCMDDBNAME=master
     
-      - DSDB_USERNAME=${DSDB_USERNAME:-someDsDbUser}
-      - DSDB_PASSWORD=${DSDB_PASSWORD:-someDsDbPassword!}
+      - SMDB_USERNAME=${SMDB_USERNAME:-someSmDbUser}
+      - SMDB_PASSWORD=${SMDB_PASSWORD:-someSmDbPassword!}
+  ds:
+    image: xmpro.azurecr.io/ds:${VERSION:-4.4.17-XMR}
+    depends_on:
+      sm:
+        condition: service_healthy
+      dsdbmigrate:
+        condition: service_completed_successfully
+      dsdb:
+        condition: service_completed_successfully
+    ports:
+      - "${DS_PORT:-5203}:8443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=dev
+      - xm__serilog__minimumlevel__default=${DS_LOG_LEVEL:-Information}
+      - xm__xmpro__data__connectionString=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
+      - xm__xmpro__xmsettings__data__connectionString=${DSDB_CONNECTIONSTRING:-Encrypt=false;Server=tcp:db;Database=DS;User=someDsDbUser;Password=someDsDbPassword!}
+      - xm__xmpro__dataStreamDesigner__streamHostDownloadBaseUrl=https://download.app.xmpro.com/
+      - xm__xmpro__dataStreamDesigner__featureFlags__dbMigrationsEnabled=false
+      - xm__xmpro__dataStreamDesigner__featureFlags__enableHealthChecks=false
+      - xm__xmpro__dataStreamDesigner__featureFlags__enableApplicationInsightsTelemetry=false
+      - xm__xmpro__healthChecks__cssPath=ClientApp/src/assets/content/styles/healthui.css
+      - xm__xmpro__xmidentity__server__baseUrl=${SM_BASEURL_SERVER:-https://localhost:5200/} 
+      - xm__xmpro__xmidentity__client__id=${AD_PRODUCT_ID:-fe011f90-5bb6-80ad-b0a2-56300bf3b65d} 
+      - xm__xmpro__xmidentity__client__baseUrl=${DS_BASEURL_CLIENT:-https://localhost:5203/}
+      - xm__xmpro__xmidentity__client__sharedkey=${DS_PRODUCT_KEY:-abbf8cd7-8123-c68a-44f4-2366510a23df} 
+      - xm__xmpro__keyVault__provider=
+      - xm__xmpro__keyVault__name=
+  db:
+    image: xmpro.azurecr.io/db:${VERSION:-4.4.17-XMR}
+    ports:
+      - "1433:1433"
+    environment:
+      - DB_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
+      - MSSQL_SA_PASSWORD=${DB_SA_PASSWORD:-someSaPassword!}
